@@ -1,0 +1,34 @@
+{
+  "name": "AMF.js",
+  "version": "1.0.0",
+  "description": "A simple AMF (ActionScript Message Format) library for Node.js",
+  "main": "lib/amf.js",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "grunt-contrib-coffee": "^0.13.0",
+    "grunt-mocha-test": "^0.12.7",
+    "chai": "^2.1.1",
+    "grunt": "^0.4.5"
+  },
+  "devDependencies": {
+    "mocha": "^2.2.1"
+  },
+  "scripts": {
+    "test": "grunt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ProjectCryo/AMF.js.git"
+  },
+  "keywords": [
+    "amf"
+  ],
+  "author": "molenzwiebel",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ProjectCryo/AMF.js/issues"
+  },
+  "homepage": "https://github.com/ProjectCryo/AMF.js"
+}

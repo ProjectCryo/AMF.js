@@ -32,7 +32,8 @@ class Serializable
 	As noted above, a method as shown below can be added to
 	prevent certain fields from being serialized. The same thing
 	can also be achieved by adding two underscores in front of
-	a variable name
+	a variable name. Note that fields with two underscores are still
+	ignored if they are returned from this function.
 
 	getSerializableFields: ->
 		["fieldA", "fieldB", "fieldC"]

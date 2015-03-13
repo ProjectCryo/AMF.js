@@ -14,10 +14,10 @@ class Writer
 	buffers.
 	###
 	write: (value) ->
-		@writable.write new Buffer value if value instanceof Array
-		@writable.write new Buffer [value] if typeof value is "number"
-		@writable.write new Buffer value, "utf8" if typeof value is "string"
-		@writable.write value if value instanceof Buffer
+		return @writable.write new Buffer value if value instanceof Array
+		return @writable.write new Buffer [value] if typeof value is "number"
+		return @writable.write new Buffer value, "utf8" if typeof value is "string"
+		return @writable.write value if value instanceof Buffer
 		throw new Error "Do not know how to write #{JSON.stringify(value)}!" 
 
 	writeUInt16BE: (value) ->

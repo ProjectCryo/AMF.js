@@ -8,13 +8,13 @@ extended to support every method in buffer.
 class Reader
 	constructor: (@readable) ->
 	
-	readByte: (len) ->
+	readByte: (len, alwaysReturnBuffer) ->
 		read = @readable.read len ? 1
-		return read if read
+		return (if read.length is 1 and not alwaysReturnBuffer then read[0] else read) if read
 		throw new Error "No #{len || 1} bytes left"
 
 	readUInt8: ->
-		read = @readByte
+		read = @readByte()
 		read += 256 if read < 0
 		return read
 
@@ -28,11 +28,12 @@ class Reader
 		@readByte(4).readInt32BE()
 
 	readString: ->
-		len = @readUInt16BE
-		@readByte(len).toString "utf8"
+		len = @readUInt16BE()
+		return "" if len is 0
+		@readByte(len, true).toString "utf8"
 
 	readAMFHeader: ->
-		handle = @readInt29
+		handle = @readInt29()
 		def = handle & 1 isnt 0
 		handle >>= 1
 
@@ -40,21 +41,21 @@ class Reader
 		value: handle
 
 	readInt29: ->
-		bit1 = @readByte
+		bit1 = @readByte()
 		return bit1 if bit1 < 128
 		total = (bit1 & 0x7f) << 7
 
-		bit2 = @readByte
+		bit2 = @readByte()
 		if bit2 < 128
 			total |= bit2
 		else
 			total = (total | bit2 & 0x7f) << 7
-			bit3 = @readByte
+			bit3 = @readByte()
 			if bit3 < 128
 				total |= bit3
 			else
 				total = (total | bit3 & 0x7f) << 8
-				total |= @readByte
+				total |= @readByte()
 
 		-(total & (1 << 28)) | total
 

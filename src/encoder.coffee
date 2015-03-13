@@ -22,7 +22,7 @@ class AMFEncoder extends writer.Writer
 	default. This function appends the id of the value's AMF
 	type in front of the actual data.
 	###
-	write: (value, amfType) ->
+	writeObject: (value, amfType) ->
 		amfType = amfType ? AMF3 # We assume we are using AMF3 by default.
 		
 		this.encodeAmf3 value if amfType is AMF3
@@ -58,7 +58,7 @@ class AMFEncoder extends writer.Writer
 		value = value.value if value instanceof classes.ForcedTypeValue
 
 		if valueType.referencable
-			if @amf0References.indexOf value isnt -1
+			if @amf0References.indexOf(value) isnt -1
 				@write AMF0.REFERENCE.id
 				@writeUInt16BE @amf0References.indexOf(value), 1
 				return
@@ -114,7 +114,10 @@ AMF0.STRING.encode = (value) ->
 	@write str
 
 AMF0.OBJECT.encode = (value) ->
-	Object.keys(value).forEach (key) =>
+	if value instanceof classes.Externalizable
+		console.log("Writing Externalizable without a name! This will cause the decoder to be unable to decode the object!")
+	keys = if value.getSerializableFields then value.getSerializableFields() else Object.keys(value)
+	keys.forEach (key) =>
 		return if key.indexOf("__") == 0 # Ignore variables starting with __
 		@serialize key, AMF0
 		@encode value[key], AMF0
@@ -169,13 +172,13 @@ AMF0.UNSUPPORTED.encode = (value) ->
 	return
 
 AMF0.TYPED_OBJECT.encode = (value) ->
-	if value["__class"] and obj["__class"] isnt ""
-		@serialize value["__class"], AMF0
+	@serialize value["__class"] || "", AMF0
 
 	if value instanceof classes.Externalizable
 		value.write @
 	else
-		Object.keys(value).forEach (key) =>
+		keys = if value.getSerializableFields then value.getSerializableFields() else Object.keys(value)
+		keys.forEach (key) =>
 			return if key.indexOf("__") == 0 # Ignore variables starting with __
 			@serialize key, AMF0
 			@encode value[key], AMF0

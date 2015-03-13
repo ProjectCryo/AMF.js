@@ -29,7 +29,7 @@ class AMFDecoder extends reader.Reader
 
 	decode: (amfType) ->
 		amfType = amfType ? AMF3
-		type = @readByte
+		type = @readByte()
 		@deserialize type, amfType
 
 	deserialize: (type, amfType) ->
@@ -37,19 +37,19 @@ class AMFDecoder extends reader.Reader
 		type.decode.call @
 
 AMF0.NUMBER.decode = ->
-	@readDoubleBE
+	@readDoubleBE()
 
 AMF0.BOOLEAN.decode = ->
-	@readByte isnt 0x00
+	@readByte() isnt 0x00
 
 AMF0.STRING.decode = ->
-	@readString
+	@readString()
 
 AMF0.OBJECT.decode = ->
 	ret = new classes.Serializable()
 	while true
-		name = @readString
-		type = @readByte
+		name = @readString()
+		type = @readByte()
 		break if type is AMF0.OBJECT_END.id
 		ret[name] = @deserialize type, AMF0
 	@amf0References.push ret
@@ -68,8 +68,8 @@ AMF0.ECMA_ARRAY.decode = ->
 	@readInt32BE() # We don't actually do anything with the length, believe it or not
 	ret = {}
 	while true
-		name = @readString
-		type = @readByte
+		name = @readString()
+		type = @readByte()
 		break if type is AMF0.OBJECT_END.id
 		ret[name] = @deserialize type, AMF0
 	@amf0References.push ret
@@ -90,14 +90,14 @@ AMF0.LONG_STRING.decode = ->
 	@readByte(@readInt32BE()).toString "utf8"
 
 AMF0.TYPED_OBJECT.decode = ->
-	name = @readString
+	name = @readString()
 	if AMFDecoder.amf0Externalizables[name]
 		res = AMFDecoder.amf0Externalizables[name].read @
 	else
 		res = new classes.Serializable name
 		while true
-			name = @readString
-			type = @readByte
+			name = @readString()
+			type = @readByte()
 			break if type is AMF0.OBJECT_END.id
 			res[name] = @deserialize type, AMF0
 
@@ -106,3 +106,6 @@ AMF0.TYPED_OBJECT.decode = ->
 
 AMF0.AMF3_OBJECT.decode = ->
 	@decode AMF3
+
+module.exports = 
+	AMFDecoder: AMFDecoder

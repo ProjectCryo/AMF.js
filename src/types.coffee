@@ -1,4 +1,4 @@
-classes = require "classes"
+classes = require "./classes"
 
 class AMFType
 	constructor: (@id, @name, referencable) ->
@@ -34,15 +34,17 @@ module.exports =
 			return module.exports.AMF0.BOOLEAN if type is "boolean"
 			return module.exports.AMF0.LONG_STRING if type is "string" and value.length >= 0xFFFF
 			return module.exports.AMF0.STRING if type is "string"
-			return module.exports.AMF0.DATE if {}.toString.call value is "[object Date]" #Dirty hack for Date due to javascripts weird instanceof.
+			return module.exports.AMF0.DATE if {}.toString.call(value) is "[object Date]" #Dirty hack for Date due to javascripts weird instanceof.
 			return module.exports.AMF0.STRICT_ARRAY if value instanceof Array
-			return module.exports.AMF0.TYPED_OBJECT if (value instanceof classes.Serializable or value instanceof classes.Externalizable) and (value["__class"] and value["__class"] isnt "")
+			if value instanceof classes.Serializable
+				return module.exports.AMF0.OBJECT if not value["__class"] or value["__class"] is ""
+				return module.exports.AMF0.TYPED_OBJECT
 			return module.exports.AMF0.ECMA_ARRAY if type is "object"
 
 			throw new Error "Unable to infer AMF0 type of #{JSON.stringify(value)}"
 
 		fromId: (id) ->
-			return type.id for key, type of module.exports.AMF0 when type instanceof AMFType and type.id is id
+			return type for key, type of module.exports.AMF0 when type instanceof AMFType and type.id is id
 			throw new Error "No AMF0 type with ID #{id}"
 
 		NUMBER: new AMFType 0x00, "NUMBER"
@@ -82,7 +84,7 @@ module.exports =
 			throw new Error "Unable to infer AMF3 type of #{JSON.stringify(value)}"
 
 		fromId: (id) ->
-			return type.id for key, type of module.exports.AMF3 when type instanceof AMFType and type.id is id
+			return type for key, type of module.exports.AMF3 when type instanceof AMFType and type.id is id
 			throw new Error "No AMF3 type with ID #{id}"
 
 		UNDEFINED: new AMFType 0x00, "UNDEFINED"

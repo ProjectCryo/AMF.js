@@ -6,13 +6,23 @@ class ForcedTypeValue
 	constructor: (@value, @type) ->
 
 ###
+A simple class storing all the settings for an AMF3 object trait.
+###
+class AMFTrait
+	constructor: (@name, @dynamic, @externalizable) ->
+		@staticFields = []
+
+###
 Every Javascript object/CoffeeScript class should extend this
 object if they want to serialize the object as a "named" object.
 Passing a serializable object to the encoder will encode every
 field, unless a getSerializableFields function is defined. This
 function should return a list of strings of fields that should be
 serialized. Note that by default every field starting with two underscores
-(__) is ignored while serializing.
+(__) is ignored while serializing. Also note that the name is not
+required. If the name field is undefined or empty, it is assumed
+that the object is anonymous. The decoded object will then have no name
+either.
 ###
 class Serializable
 	constructor: (serializable_name) ->
@@ -37,9 +47,9 @@ extenalizable to their read function. Note that the read function
 is static and is supposed to return a new instance of the class
 it decodes.
 ###
-class Externalizable
+class Externalizable extends Serializable
 	constructor: (externalizable_name) ->
-		@__class = externalizable_name
+		super externalizable_name
 
 	###
 	Called when this object needs to be written to a stream. This
@@ -56,10 +66,11 @@ class Externalizable
 	decoder) create a new instance of this Externalizable with the read
 	data. This method is expected to return the read value.
 	###
-	@read: (readable, decoder) ->
+	@read: (decoder) ->
 		throw new Error "Externalizable has no read function defined!"
 	
 module.exports =
 	ForcedTypeValue: ForcedTypeValue
+	AMFTrait: AMFTrait
 	Serializable: Serializable
 	Externalizable: Externalizable

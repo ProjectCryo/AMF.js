@@ -19,10 +19,11 @@ class AMFType
 	and to decode the value. The context (the this value) is set
 	to the decoder, so this.decode(type) can be used.
 	###
-	decode: (readable) ->
+	decode: ->
 		throw new Error "No decoder defined for type #{@name}"
 
 module.exports =
+	AMFType: AMFType
 	AMF0:
 		infer: (value) ->
 			type = typeof value
@@ -35,7 +36,7 @@ module.exports =
 			return module.exports.AMF0.STRING if type is "string"
 			return module.exports.AMF0.DATE if {}.toString.call value is "[object Date]" #Dirty hack for Date due to javascripts weird instanceof.
 			return module.exports.AMF0.STRICT_ARRAY if value instanceof Array
-			return module.exports.AMF0.TYPED_OBJECT if value instanceof classes.Serializable or value instanceof classes.Externalizable
+			return module.exports.AMF0.TYPED_OBJECT if (value instanceof classes.Serializable or value instanceof classes.Externalizable) and (value["__class"] and value["__class"] isnt "")
 			return module.exports.AMF0.ECMA_ARRAY if type is "object"
 
 			throw new Error "Unable to infer AMF0 type of #{JSON.stringify(value)}"

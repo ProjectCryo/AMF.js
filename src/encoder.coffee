@@ -9,7 +9,8 @@ class AMFEncoder extends writer.Writer
 	Creates a new AMFEncoder with a stream that it should
 	write to.
 	###
-	constructor: (@writable) ->
+	constructor: (writable) ->
+		super writable
 		# Setup reference tables so we can access them from the methods later.
 		@amf0References = []
 		@amf3ObjectReferences = []
@@ -40,6 +41,7 @@ class AMFEncoder extends writer.Writer
 	encode: (value, amfType) ->
 		amfType = amfType ? AMF3 # We assume we are using AMF3 by default.
 		typeOfObject = amfType.infer value
+		value = value.value if value instanceof classes.ForcedTypeValue
 
 		if typeOfObject is AMF0.AMF3_OBJECT or amfType is AMF3
 			@write AMF0.AMF3_OBJECT.id
@@ -53,6 +55,7 @@ class AMFEncoder extends writer.Writer
 	###
 	encodeAmf0: (value, valueType) ->
 		valueType = valueType ? AMF0.infer value
+		value = value.value if value instanceof classes.ForcedTypeValue
 
 		if valueType.referencable
 			if @amf0References.indexOf value isnt -1
@@ -71,6 +74,8 @@ class AMFEncoder extends writer.Writer
 	###
 	encodeAmf3: (value, valueType) ->
 		valueType = valueType ? AMF3.infer value
+		value = value.value if value instanceof classes.ForcedTypeValue
+
 		if valueType.referencable and value isnt "" # We never reference empty strings
 			index = @amf3StringReferences.indexOf value if valueType is AMF3.STRING 
 			index = @amf3ObjectReferences.indexOf value if valueType isnt AMF3.STRING
@@ -94,6 +99,7 @@ class AMFEncoder extends writer.Writer
 	serialize: (value, amfType) ->
 		amfType = amfType ? AMF3
 		valueType = amfType.infer value
+		value = value.value if value instanceof classes.ForcedTypeValue
 		valueType.encode.call this, value
 
 AMF0.NUMBER.encode = (value) ->
@@ -115,10 +121,10 @@ AMF0.OBJECT.encode = (value) ->
 	@write [0x00, 0x00, AMF0.OBJECT_END.id] # Write empty string and then OBJECT_END to indicate end.
 
 AMF0.NULL.encode = (value) ->
-	return;
+	return
 
 AMF0.UNDEFINED.encode = (value) ->
-	return;
+	return
 
 AMF0.REFERENCE.encode = (value) ->
 	@writeUInt16BE value
@@ -160,7 +166,7 @@ AMF0.LONG_STRING.encode = (value) ->
 	@write str
 
 AMF0.UNSUPPORTED.encode = (value) ->
-	return; 
+	return
 
 AMF0.TYPED_OBJECT.encode = (value) ->
 	if value["__class"] and obj["__class"] isnt ""
@@ -173,7 +179,68 @@ AMF0.TYPED_OBJECT.encode = (value) ->
 			return if key.indexOf("__") == 0 # Ignore variables starting with __
 			@serialize key, AMF0
 			@encode value[key], AMF0
+		@write [0x00, 0x00, AMF0.OBJECT_END.id] # Empty string and 0x09
 
-	@write [0x00, 0x00, AMF0.OBJECT_END.id] # Empty string and 0x09
+AMF3.UNDEFINED.encode = 
+AMF3.NULL.encode =
+AMF3.FALSE.encode = 
+AMF3.TRUE.encode = (value) ->
+	return # Undefined, null, false and true all use their id bit to show what they are and do not need more information.
+
+AMF3.INTEGER.encode = (value) ->
+
+AMF3.DOUBLE.encode = (value) ->
+	@writeDoubleBE value
+
+AMF3.STRING.encode = (value) ->
+	str = new Buffer value, "utf8"
+	@serialize (str.length << 1) | 1, AMF3
+	@write str
+
+AMF3.DATE.encode = (value) ->
+	@serialize 1, AMF3 # This is the reference integer. We don't send cached dates, because we are lazy
+	@writeDoubleBE value.getTime()
+
+AMF3.ARRAY.encode = (value) ->
+	if value instanceof Array
+		@write value.length << 1 | 1
+		@serialize "", AMF3 #Empty string to end the associative part
+		@encodeAmf3 element for element in value
+	else
+		@write 0x01 # This 0x01 is 0 << 1 | 1, indicating a 0 length array.
+		Object.keys(value).forEach (key) =>
+			return if key.indexOf("__") == 0 # Ignore variables starting with __
+			@serialize key, AMF3
+			@encodeAmf3 value[key]
 
 
+AMF3.OBJECT.encode = (value) ->
+	if not value["__class"] or value["__class"] is ""
+		@write 0x0b # 0x0b is 0 length, dynamic, non-externalizable type.
+		Object.keys(value).forEach (key) =>
+			return if key.indexOf("__") == 0 # Ignore variables starting with __
+			@serialize key, AMF3
+			@encodeAmf3 value[key]
+		return
+	
+	externalizable = value instanceof classes.Externalizable
+	keyCount = keyCount + 1 || 1 for own key of value when key.indexOf("__") isnt 0
+	header = keyCount << 4 | if externalizable then 1 else 0 << 2
+	header = ((header | 2) | 1)
+
+	@write header
+	@serialize value["__class"] ? "", AMF3
+	return value.write @ if externalizable
+	Object.keys(value).forEach (key) =>
+		return if key.indexOf("__") == 0 # Ignore variables starting with __
+		@serialize key, AMF3
+	Object.keys(value).forEach (key) =>
+		return if key.indexOf("__") == 0 # Ignore variables starting with __
+		@encodeAmf3 value[key]
+
+AMF3.BYTE_ARRAY.encode = (value) ->
+	@serialize value.length << 1 | 1, AMF3
+	@write value
+
+module.exports = 
+	AMFEncoder: AMFEncoder

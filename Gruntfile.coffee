@@ -2,8 +2,12 @@ module.exports = (grunt) ->
   grunt.initConfig
     coffee:
       compile:
-        files:
-          'lib/amf.js': ['src/*.coffee']
+        expand: true
+        flatten: true
+        cwd: 'src/'
+        src: ['*.coffee']
+        dest: 'lib/'
+        ext: '.js'
     mochaTest:
       options:
         reporter: 'nyan'

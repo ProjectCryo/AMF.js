@@ -75,7 +75,7 @@ module.exports =
 			return module.exports.AMF3.STRING if type is "string"
 			return module.exports.AMF3.INTEGER if type is "number" and parseInt(value) is value
 			return module.exports.AMF3.DOUBLE if type is "number"
-			return module.exports.AMF3.DATE if {}.toString.call value is "[object Date]" #Dirty hack for Date due to javascripts weird instanceof.
+			return module.exports.AMF3.DATE if {}.toString.call(value) is "[object Date]" #Dirty hack for Date due to javascripts weird instanceof.
 			return module.exports.AMF3.BYTE_ARRAY if value instanceof Buffer
 			return module.exports.AMF3.ARRAY if value instanceof Array
 			return module.exports.AMF3.OBJECT if value instanceof classes.Serializable or value instanceof classes.Externalizable

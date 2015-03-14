@@ -129,7 +129,7 @@ AMF3.STRING.decode = ->
 	header = @readAMFHeader()
 	return @amf3StringReferences[header.value] if not header.isDef
 	return "" if header.value is 0
-	str = @readByte(header.value).toString 'utf8'
+	str = @readByte(header.value, true).toString 'utf8'
 	@amf3StringReferences.push str
 	return str
 
@@ -159,11 +159,11 @@ readAMF3ObjectHeader = (flags) ->
 	return @amf3TraitReferences[flags >> 1] if flags & 1 is 0
 
 	name = @deserialize AMF3.STRING, AMF3
-	isExternalizable = (flags >> 1) & 1 is 1;
-	isDynamic = (flags >> 2) & 1 is 1;
-	staticKeyLen = flags >> 3;
+	isExternalizable = (flags >> 1) & 1 is 1
+	isDynamic = (flags >> 2) & 1 is 1
+	staticKeyLen = flags >> 3
 	trait = new classes.AMFTrait name, isDynamic, isExternalizable
-	trait.staticFields[x] = @deserialize AMF3.STRING, AMF3 for x in [0..staticKeyLen - 1]
+	trait.staticFields.push @deserialize AMF3.STRING, AMF3 for x in [0..staticKeyLen - 1] if staticKeyLen isnt 0
 
 	@amf3TraitReferences.push trait
 	return trait
@@ -175,10 +175,10 @@ AMF3.OBJECT.decode = ->
 	trait = readAMF3ObjectHeader.call @, header.value
 	if trait.externalizable
 		throw new Error "No externalizable registered with name #{trait.name}" if not AMFDecoder.amf3Externalizables[trait.name]
-		return AMFDecoder.amf3Externalizables[name].read @
+		return AMFDecoder.amf3Externalizables[trait.name].read @
 
 	ret = new classes.Serializable trait.name || undefined
-	ret[x] = @decode AMF3 for x in ret.staticFields
+	ret[x] = @decode AMF3 for x in trait.staticFields
 
 	if trait.dynamic
 		while (key = @deserialize AMF3.STRING, AMF3) isnt ""

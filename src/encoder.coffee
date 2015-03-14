@@ -191,6 +191,14 @@ AMF3.TRUE.encode = (value) ->
 	return # Undefined, null, false and true all use their id bit to show what they are and do not need more information.
 
 AMF3.INTEGER.encode = (value) ->
+	throw new RangeError value if value > 536870911 or value < -268435456
+
+	# This is ugly but it works so don't complain!
+	value &= 0x1fffffff
+	return @write value if value < 0x80
+	return @write [(value >> 7 & 0x7f) | 0x80, value & 0x7f] if value < 0x4000
+	return @write [(value >> 14 & 0x7f) | 0x80, (value >> 7 & 0x7f) | 0x80, value & 0x7f] if value < 0x200000
+	@write [(value >> 22 & 0x7f) | 0x80, (value >> 14 & 0x7f) | 0x80, (value >> 7 & 0x7f) | 0x80, value & 0xff]
 
 AMF3.DOUBLE.encode = (value) ->
 	@writeDoubleBE value
@@ -215,24 +223,28 @@ AMF3.ARRAY.encode = (value) ->
 			return if key.indexOf("__") == 0 # Ignore variables starting with __
 			@serialize key, AMF3
 			@encodeAmf3 value[key]
+		@serialize "", AMF3 # Indicate end
 
 
 AMF3.OBJECT.encode = (value) ->
 	if not value["__class"] or value["__class"] is ""
 		@write 0x0b # 0x0b is 0 length, dynamic, non-externalizable type.
+		@write 0x01 # Empty name
 		Object.keys(value).forEach (key) =>
 			return if key.indexOf("__") == 0 # Ignore variables starting with __
 			@serialize key, AMF3
 			@encodeAmf3 value[key]
+		@serialize "", AMF3 
 		return
 	
 	externalizable = value instanceof classes.Externalizable
-	keyCount = keyCount + 1 || 1 for own key of value when key.indexOf("__") isnt 0
-	header = keyCount << 4 | if externalizable then 1 else 0 << 2
+	keyCount = 0
+	keyCount++ for own key of value when key.indexOf("__") isnt 0 if not externalizable
+	header = keyCount << 4 | (if externalizable then 1 else 0) << 2
 	header = ((header | 2) | 1)
 
 	@write header
-	@serialize value["__class"] ? "", AMF3
+	@serialize value["__class"], AMF3
 	return value.write @ if externalizable
 	Object.keys(value).forEach (key) =>
 		return if key.indexOf("__") == 0 # Ignore variables starting with __

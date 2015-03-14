@@ -2,7 +2,7 @@
   "name": "AMF.js",
   "version": "1.0.0",
   "description": "A simple AMF (ActionScript Message Format) library for Node.js",
-  "main": "lib/amf.js",
+  "main": "lib/amf-js.js",
   "directories": {
     "test": "test"
   },

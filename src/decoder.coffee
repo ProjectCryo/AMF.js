@@ -107,5 +107,126 @@ AMF0.TYPED_OBJECT.decode = ->
 AMF0.AMF3_OBJECT.decode = ->
 	@decode AMF3
 
+AMF3.UNDEFINED.decode = ->
+	undefined
+
+AMF3.NULL.decode = ->
+	null
+
+AMF3.FALSE.decode = ->
+	false
+
+AMF3.TRUE.decode = ->
+	true
+
+AMF3.INTEGER.decode = ->
+	@readInt29()
+
+AMF3.DOUBLE.decode = ->
+	@readDoubleBE()
+
+AMF3.STRING.decode = ->
+	header = @readAMFHeader()
+	return @amf3StringReferences[header.value] if not header.isDef
+	return "" if header.value is 0
+	str = @readByte(header.value).toString 'utf8'
+	@amf3StringReferences.push str
+	return str
+
+AMF3.DATE.decode = ->
+	header = @readAMFHeader()
+	return @amf3ObjectReferences[header.value] if not header.isDef
+	date = new Date @readDoubleBE()
+	@amf3ObjectReferences.push date
+	return date
+
+AMF3.ARRAY.decode = ->
+	header = @readAMFHeader()
+	return @amf3ObjectReferences[header.value] if not header.isDef
+
+	named = {}
+	while (key = @deserialize AMF3.STRING, AMF3) isnt ""
+		named[key] = @decode AMF3
+	if Object.keys(named).length > 0 # Associative array
+		@amf3ObjectReferences.push named
+		return named
+
+	ret = (@decode AMF3 for x in [0..header.value - 1]) # Normal array
+	@amf3ObjectReferences.push ret
+	return ret
+
+readAMF3ObjectHeader = (flags) ->
+	return @amf3TraitReferences[flags >> 1] if flags & 1 is 0
+
+	name = @deserialize AMF3.STRING, AMF3
+	isExternalizable = (flags >> 1) & 1 is 1;
+	isDynamic = (flags >> 2) & 1 is 1;
+	staticKeyLen = flags >> 3;
+	trait = new classes.AMFTrait name, isDynamic, isExternalizable
+	trait.staticFields[x] = @deserialize AMF3.STRING, AMF3 for x in [0..staticKeyLen - 1]
+
+	@amf3TraitReferences.push trait
+	return trait
+
+AMF3.OBJECT.decode = ->
+	header = @readAMFHeader()
+	return @amf3ObjectReferences[header.value] if not header.isDef
+
+	trait = readAMF3ObjectHeader.call @, header.value
+	if trait.externalizable
+		throw new Error "No externalizable registered with name #{trait.name}" if not AMFDecoder.amf3Externalizables[trait.name]
+		return AMFDecoder.amf3Externalizables[name].read @
+
+	ret = new classes.Serializable trait.name || undefined
+	ret[x] = @decode AMF3 for x in ret.staticFields
+
+	if trait.dynamic
+		while (key = @deserialize AMF3.STRING, AMF3) isnt ""
+			ret[key] = @decode AMF3
+
+	return ret
+
+AMF3.BYTE_ARRAY.decode = ->
+	header = @readAMFHeader()
+	return @amf3ObjectReferences[header.value] if not header.isDef
+
+	bytes = @readByte header.value
+	@amf3ObjectReferences.push bytes
+	return bytes
+
+decodeVector = (func) ->
+	header = @readAMFHeader()
+	return @amf3ObjectReferences[header.value] if not header.isDef
+
+	@readByte() # Fixed size byte
+	res = (func.call @ for x in [0..header.value - 1])
+	@amf3ObjectReferences.push res
+	return res
+
+AMF3.VECTOR_INT.decode = ->
+	decodeVector.call @, ->
+		return @readInt32BE()
+
+AMF3.VECTOR_UINT.decode = ->
+	decodeVector.call @, ->
+		return @readInt32BE()
+
+AMF3.VECTOR_DOUBLE.decode = ->
+	decodeVector.call @, ->
+		return @readDoubleBE()
+
+AMF3.VECTOR_OBJECT.decode = ->
+	decodeVector.call @, ->
+		return @decode AMF3
+
+AMF3.DICTIONARY.decode = ->
+	header = @readAMFHeader()
+	return @amf3ObjectReferences[header.value] if not header.isDef
+
+	@readByte() # Don't care about this value
+	ret = {}
+	ret[JSON.stringify(@decode AMF3)] = @decode AMF3 for x in [0..header.value - 1]
+	return ret
+
 module.exports = 
 	AMFDecoder: AMFDecoder

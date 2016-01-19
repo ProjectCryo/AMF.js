@@ -243,7 +243,7 @@ AMF3.OBJECT.encode = (value) ->
 	header = keyCount << 4 | (if externalizable then 1 else 0) << 2
 	header = ((header | 2) | 1)
 
-	@write header
+	AMF3.INTEGER.encode.call this, header
 	@serialize value["__class"], AMF3
 	return value.write @ if externalizable
 	Object.keys(value).forEach (key) =>

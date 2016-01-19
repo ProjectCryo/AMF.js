@@ -248,3 +248,31 @@ describe "amf.js - AMF3", ->
 		read.should.have.deep.property('d.length').equal 3
 		read.should.have.deep.property('e.__class').equal "my.nested.empty.object"
 		read.should.have.deep.property('f.__class').equal undefined
+
+	it "should be able to serialize types with large interface", ->
+		theObject = new amf_js.Serializable "my.test.object"
+		theObject.a = 10
+		theObject.b = 20.333333
+		theObject.c = "SomeValue"
+		theObject.d = [1, 2, 3]
+		theObject.e = 10
+		theObject.f = 10
+		theObject.g = 10
+		theObject.h = 10
+		theObject.i = 10
+		theObject.j = 10
+		theObject.k = 10
+		theObject.l = 10
+		theObject.m = 10
+		theObject.n = 10
+		theObject.o = 10
+		theObject.p = 10
+
+		encoder.writeObject theObject, AMF3
+		read = decoder.decode(AMF3)
+
+		read.should.be.an.instanceof amf_js.Serializable
+		read.should.have.property('a').equal 10
+		read.should.have.property('b').equal 20.333333
+		read.should.have.property('c').equal "SomeValue"
+		read.should.have.property('p').equal 10

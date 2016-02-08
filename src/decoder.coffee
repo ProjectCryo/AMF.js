@@ -151,7 +151,12 @@ AMF3.ARRAY.decode = ->
 		@amf3ObjectReferences.push named
 		return named
 
-	ret = (@decode AMF3 for x in [0..header.value - 1]) # Normal array
+	ret = []
+	i = 0
+	while i < header.value
+		ret.push @decode AMF3
+		i++ 
+
 	@amf3ObjectReferences.push ret
 	return ret
 

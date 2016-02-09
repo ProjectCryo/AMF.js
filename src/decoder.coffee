@@ -127,7 +127,7 @@ AMF3.DOUBLE.decode = ->
 
 AMF3.STRING.decode = ->
 	header = @readAMFHeader()
-	return @amf3StringReferences[header.value] if not header.isDef
+	return (@amf3StringReferences[header.value] || throw new Error("Invalid reference")) if not header.isDef
 	return "" if header.value is 0
 	str = @readByte(header.value, true).toString 'utf8'
 	@amf3StringReferences.push str
@@ -135,14 +135,14 @@ AMF3.STRING.decode = ->
 
 AMF3.DATE.decode = ->
 	header = @readAMFHeader()
-	return @amf3ObjectReferences[header.value] if not header.isDef
+	return (@amf3ObjectReferences[header.value] || throw new Error("Invalid reference")) if not header.isDef
 	date = new Date @readDoubleBE()
 	@amf3ObjectReferences.push date
 	return date
 
 AMF3.ARRAY.decode = ->
 	header = @readAMFHeader()
-	return @amf3ObjectReferences[header.value] if not header.isDef
+	return (@amf3ObjectReferences[header.value] || throw new Error("Invalid reference")) if not header.isDef
 
 	named = {}
 	while (key = @deserialize AMF3.STRING, AMF3) isnt ""
@@ -161,7 +161,7 @@ AMF3.ARRAY.decode = ->
 	return ret
 
 readAMF3ObjectHeader = (flags) ->
-	return @amf3TraitReferences[flags >> 1] if (flags & 1) is 0
+	return (@amf3TraitReferences[flags >> 1] || throw new Error("Invalid reference")) if (flags & 1) is 0
 
 	name = @deserialize AMF3.STRING, AMF3
 	isExternalizable = (flags >> 1) & 1 is 1
@@ -175,7 +175,7 @@ readAMF3ObjectHeader = (flags) ->
 
 AMF3.OBJECT.decode = ->
 	header = @readAMFHeader()
-	return @amf3ObjectReferences[header.value] if not header.isDef
+	return (@amf3ObjectReferences[header.value] || throw new Error("Invalid reference")) if not header.isDef
 
 	trait = readAMF3ObjectHeader.call @, header.value
 	if trait.externalizable
@@ -194,7 +194,7 @@ AMF3.OBJECT.decode = ->
 
 AMF3.BYTE_ARRAY.decode = ->
 	header = @readAMFHeader()
-	return @amf3ObjectReferences[header.value] if not header.isDef
+	return (@amf3ObjectReferences[header.value] || throw new Error("Invalid reference")) if not header.isDef
 
 	bytes = @readByte header.value
 	@amf3ObjectReferences.push bytes
@@ -202,7 +202,7 @@ AMF3.BYTE_ARRAY.decode = ->
 
 decodeVector = (func) ->
 	header = @readAMFHeader()
-	return @amf3ObjectReferences[header.value] if not header.isDef
+	return (@amf3ObjectReferences[header.value] || throw new Error("Invalid reference")) if not header.isDef
 
 	@readByte() # Fixed size byte
 	res = (func.call @ for x in [0..header.value - 1])
@@ -227,7 +227,7 @@ AMF3.VECTOR_OBJECT.decode = ->
 
 AMF3.DICTIONARY.decode = ->
 	header = @readAMFHeader()
-	return @amf3ObjectReferences[header.value] if not header.isDef
+	return (@amf3ObjectReferences[header.value] || throw new Error("Invalid reference")) if not header.isDef
 
 	@readByte() # Don't care about this value
 	ret = {}

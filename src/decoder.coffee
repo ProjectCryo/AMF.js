@@ -161,7 +161,7 @@ AMF3.ARRAY.decode = ->
 	return ret
 
 readAMF3ObjectHeader = (flags) ->
-	return @amf3TraitReferences[flags >> 1] if flags & 1 is 0
+	return @amf3TraitReferences[flags >> 1] if (flags & 1) is 0
 
 	name = @deserialize AMF3.STRING, AMF3
 	isExternalizable = (flags >> 1) & 1 is 1

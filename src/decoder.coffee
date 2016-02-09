@@ -179,6 +179,7 @@ AMF3.OBJECT.decode = ->
 
 	trait = readAMF3ObjectHeader.call @, header.value
 	if trait.externalizable
+		return @decode(AMF3) if trait.name is "flex.messaging.io.ArrayCollection"
 		throw new Error "No externalizable registered with name #{trait.name}" if not AMFDecoder.amf3Externalizables[trait.name]
 		return AMFDecoder.amf3Externalizables[trait.name].read @
 

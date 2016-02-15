@@ -145,19 +145,24 @@ AMF3.ARRAY.decode = ->
 	return (@amf3ObjectReferences[header.value] || throw new Error("Invalid reference")) if not header.isDef
 
 	named = {}
+	@amf3ObjectReferences.push(named)
+	idx = @amf3ObjectReferences.length - 1
+
 	while (key = @deserialize AMF3.STRING, AMF3) isnt ""
 		named[key] = @decode AMF3
+
 	if Object.keys(named).length > 0 # Associative array
-		@amf3ObjectReferences.push named
 		return named
 
+	@amf3ObjectReferences.splice idx, 1
+
 	ret = []
+	@amf3ObjectReferences.push ret
 	i = 0
 	while i < header.value
 		ret.push @decode AMF3
 		i++ 
 
-	@amf3ObjectReferences.push ret
 	return ret
 
 readAMF3ObjectHeader = (flags) ->
@@ -179,11 +184,19 @@ AMF3.OBJECT.decode = ->
 
 	trait = readAMF3ObjectHeader.call @, header.value
 	if trait.externalizable
-		return @decode(AMF3) if trait.name is "flex.messaging.io.ArrayCollection"
+		if trait.name is "flex.messaging.io.ArrayCollection"
+			array = @decode AMF3
+			@amf3ObjectReferences.push array
+			return array
+
 		throw new Error "No externalizable registered with name #{trait.name}" if not AMFDecoder.amf3Externalizables[trait.name]
-		return AMFDecoder.amf3Externalizables[trait.name].read @
+
+		object = AMFDecoder.amf3Externalizables[trait.name].read @
+		@amf3ObjectReferences.push object
+		return object
 
 	ret = new classes.Serializable trait.name || undefined
+	@amf3ObjectReferences.push ret
 	ret[x] = @decode AMF3 for x in trait.staticFields
 
 	if trait.dynamic
@@ -231,6 +244,7 @@ AMF3.DICTIONARY.decode = ->
 
 	@readByte() # Don't care about this value
 	ret = {}
+	@amf3ObjectReferences.push ret
 	ret[JSON.stringify(@decode AMF3)] = @decode AMF3 for x in [0..header.value - 1]
 	return ret
 

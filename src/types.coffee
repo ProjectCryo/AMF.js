@@ -73,7 +73,7 @@ module.exports =
 			return module.exports.AMF3.FALSE if type is "boolean" and not value
 			return module.exports.AMF3.TRUE if type is "boolean"
 			return module.exports.AMF3.STRING if type is "string"
-			return module.exports.AMF3.INTEGER if type is "number" and parseInt(value) is value
+			return module.exports.AMF3.INTEGER if type is "number" and parseInt(value) is value and value < 536870911 and value > -268435456
 			return module.exports.AMF3.DOUBLE if type is "number"
 			return module.exports.AMF3.DATE if {}.toString.call(value) is "[object Date]" #Dirty hack for Date due to javascripts weird instanceof.
 			return module.exports.AMF3.BYTE_ARRAY if value instanceof Buffer
